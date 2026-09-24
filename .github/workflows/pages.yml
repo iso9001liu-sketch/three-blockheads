@@ -26,6 +26,8 @@ jobs:
           enablement: true
           static_site_generator: html
       - name: capture diagnostics
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           {
             echo "=== configure outcome: ${{ steps.pages.outcome }} ==="
@@ -33,13 +35,15 @@ jobs:
             gh api repos/${{ github.repository }}/pages 2>&1 || true
             echo "--- GET /actions/permissions/pages ---"
             gh api repos/${{ github.repository }}/actions/permissions/pages 2>&1 || true
-            echo "--- GET /repos pages build ---"
+            echo "--- GET /pages/builds ---"
             gh api repos/${{ github.repository }}/pages/builds 2>&1 || true
+            echo "--- PUT attempt ---"
+            gh api -X POST repos/${{ github.repository }}/pages -f build_type=legacy -F source[branch]=main -F source[path]=/ 2>&1 || true
           } > _diag.txt
           git config user.email "bot@example.com"
           git config user.name "deploy-bot"
           git add _diag.txt
-          git commit -m "chore: deploy diagnostics" || true
+          git commit -m "chore: deploy diagnostics v2" || true
           git push origin HEAD:main || echo "PUSH_FAILED"
       - uses: actions/upload-pages-artifact@v3
         with:
