@@ -4,7 +4,7 @@ on:
     branches: [main]
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 concurrency:
@@ -18,10 +18,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/configure-pages@v5
+      - name: configure-pages
+        id: pages
+        continue-on-error: true
+        uses: actions/configure-pages@v5
         with:
           enablement: true
           static_site_generator: html
+      - name: capture diagnostics
+        run: |
+          {
+            echo "=== configure outcome: ${{ steps.pages.outcome }} ==="
+            echo "--- GET /pages ---"
+            gh api repos/${{ github.repository }}/pages 2>&1 || true
+            echo "--- GET /actions/permissions/pages ---"
+            gh api repos/${{ github.repository }}/actions/permissions/pages 2>&1 || true
+            echo "--- GET /repos pages build ---"
+            gh api repos/${{ github.repository }}/pages/builds 2>&1 || true
+          } > _diag.txt
+          git config user.email "bot@example.com"
+          git config user.name "deploy-bot"
+          git add _diag.txt
+          git commit -m "chore: deploy diagnostics" || true
+          git push origin HEAD:main || echo "PUSH_FAILED"
       - uses: actions/upload-pages-artifact@v3
         with:
           path: .
