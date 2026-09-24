@@ -28,22 +28,25 @@ jobs:
       - name: capture diagnostics
         env:
           GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           {
-            echo "=== configure outcome: ${{ steps.pages.outcome }} ==="
+            echo "=== tokenlen=${#GH_TOKEN} outcome=${{ steps.pages.outcome }} ==="
             echo "--- GET /pages ---"
-            gh api repos/${{ github.repository }}/pages 2>&1 || true
-            echo "--- GET /actions/permissions/pages ---"
-            gh api repos/${{ github.repository }}/actions/permissions/pages 2>&1 || true
-            echo "--- GET /pages/builds ---"
-            gh api repos/${{ github.repository }}/pages/builds 2>&1 || true
-            echo "--- PUT attempt ---"
-            gh api -X POST repos/${{ github.repository }}/pages -f build_type=legacy -F source[branch]=main -F source[path]=/ 2>&1 || true
+            curl -s -H "Authorization: token $GH_TOKEN" https://api.github.com/repos/${{ github.repository }}/pages 2>&1 || true
+            echo "--- GET /permissions/pages ---"
+            curl -s -H "Authorization: token $GH_TOKEN" https://api.github.com/repos/${{ github.repository }}/actions/permissions/pages 2>&1 || true
+            echo "--- POST /pages (enable, main) ---"
+            curl -s -X POST -H "Authorization: token $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+              https://api.github.com/repos/${{ github.repository }}/pages \
+              -d '{"build_type":"legacy","source":{"branch":"main","path":"/"}}' 2>&1 || true
+            echo "--- GET /pages after POST ---"
+            curl -s -H "Authorization: token $GH_TOKEN" https://api.github.com/repos/${{ github.repository }}/pages 2>&1 || true
           } > _diag.txt
           git config user.email "bot@example.com"
           git config user.name "deploy-bot"
           git add _diag.txt
-          git commit -m "chore: deploy diagnostics v2" || true
+          git commit -m "chore: deploy diagnostics v3" || true
           git push origin HEAD:main || echo "PUSH_FAILED"
       - uses: actions/upload-pages-artifact@v3
         with:
