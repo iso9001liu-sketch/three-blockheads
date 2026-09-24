@@ -83,6 +83,17 @@ const canvas = document.createElement('canvas');
 const ctx = canvas.getContext('2d');
 document.getElementById('app').appendChild(canvas);
 
+/* 画布分辨率跟随窗口，避免世界被裁剪出画面 */
+let dpr = 1;
+function resizeCanvas(){
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width  = Math.round(innerWidth  * dpr);
+  canvas.height = Math.round(innerHeight * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+resizeCanvas();
+addEventListener('resize', resizeCanvas);
+
 let AC = null, muted = false;
 function sfx(freq, dur, type='square', vol=.07){
   if(muted) return;
@@ -175,6 +186,7 @@ const LEVELS = [
     name:'04 · 一起来想辙',
     hint:'蓝方块把箱子推进坑，粉团子乘风扇上去按按钮',
     rows:[
+      "..........................",
       "..........................",
       "..........................",
       "..........................",
@@ -544,6 +556,7 @@ function fitView(){
   cam.x=(ww-lw*cam.scale)/2; cam.y=(wh-lh*cam.scale)/2;
 }
 function draw(){
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   fitView();
   const ww=innerWidth,wh=innerHeight;
   const bg=ctx.createLinearGradient(0,0,0,wh);
