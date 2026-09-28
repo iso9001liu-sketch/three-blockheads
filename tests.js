@@ -5,6 +5,7 @@ function place(g,id,x,bottom){Object.assign(g.people[id],{x,y:bottom-g.people[id
 function until(g,predicate,input,limit=700){for(let i=0;i<limit;i++){if(predicate())return;g.tick(typeof input==='function'?input():input);}throw Error(`Timed out: level ${g.level.index+1} ${JSON.stringify(g.people)} flags ${g.pinkOn},${g.bridge}`);}
 function move(g,id,x,extra=()=>({}),limit=700){g.select(id);const p=g.people[id];until(g,()=>Math.abs(p.x-x)<5&&Math.abs(p.vx)<.8,()=>{const error=x-p.x-p.vx*(id===1?8:2);return {right:error>1,left:error<-1,...extra(p)};},limit);}
 function solve(index,seed=1){const g=new Game(index,seed),l=g.level;step(g,3);
+ if(l.custom){for(const input of require('./demo')(g)){if(!input.hold)g.tick(input);}assert(g.won);assert.equal(g.deaths,0);console.log('PASS new chapter '+(l.n+1));return g;}
  if(l.seesaw){for(const input of require('./demo')(g)){if(!input.hold)g.tick(input);}assert(g.won);assert.equal(g.flags.launches,2);console.log('PASS redesigned seesaw route');return g;}
  // Move blue to its pad; seventh level requires a jump onto the raised pad.
  if(l.n===6){g.tick({jump:true});step(g,10);move(g,0,120);step(g,30);}else move(g,0,270);
@@ -49,3 +50,12 @@ console.log('PASS: 8 campaign demos + 100 seeded random demos, zero falls.');
  const respawn=new Game(2);place(respawn,1,580,800);respawn.people[1].launching=true;respawn.tick();assert.equal(respawn.people[1].launching,false,'Falling must reset launch momentum');
 }
 console.log('PASS: seesaw needs impact + passenger; one receiver cannot open bridge; respawn clears launch.');
+// Later chapters: constraints must matter before the successful route.
+{const g=new Game(3);step(g,2);place(g,0,295,520);step(g,35,{right:true});assert.equal(g.crate.x,340,'Locked cargo must resist blue');assert(!g.bridge);}
+{const g=new Game(4);place(g,1,80,520);place(g,0,385,520);step(g,100);assert.equal(g.ferry.x,350,'Ferry cannot leave without pink power');place(g,1,180,520);step(g,80);assert(g.ferry.x>350,'Powered ferry must carry its passenger');place(g,1,100,520);const x=g.ferry.x;step(g,30);assert.equal(g.ferry.x,x,'Power loss stops ferry before backup');}
+{const g=new Game(5);place(g,1,285,520);step(g,2);assert(g.people[1].x<365,'Unpowered portal must not teleport');place(g,2,216,520);g.select(2);g.tick({jump:true});step(g,80);assert.equal(g.route,0,'Route cannot switch without island battery');}
+{const g=new Game(6);place(g,0,480,520);step(g,1);assert.equal(g.checkpoints[0],465);g.frames=65;place(g,0,635,520);g.tick();assert.equal(g.deaths,1);assert.equal(g.people[0].x,465,'Red laser must return to this character checkpoint');assert.equal(g.checkpoints[1],150,'Other characters do not inherit checkpoint');}
+{const g=new Game(7);place(g,1,405,520);step(g,2);assert(!g.flags.gearStopped,'Gear entry requires blue support');place(g,0,260,520);step(g,2);assert(g.people[1].frozen);place(g,0,998,520);step(g,2);assert(!g.flags.rescued,'Rescue cannot release temporary bridge support before lock');place(g,2,1020,270);step(g,2);assert(g.flags.rescued);assert(!g.people[1].frozen);}
+console.log('PASS: cargo lock, ferry power, portal battery, laser checkpoints, rescue ordering.');
+
+
